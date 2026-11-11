@@ -123,6 +123,7 @@ function App() {
                   pendingStart={startMin}
                   pendingEnd={endMin}
                   pendingAvailable={available}
+                  overlapBookingIds={validation?.overlapBookingIds ?? []}
                 />
 
                 {/* Rules card */}

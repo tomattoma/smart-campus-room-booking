@@ -32,4 +32,5 @@ export interface ValidationMessage {
 export interface ValidationResult {
   available: boolean;
   messages: ValidationMessage[];
+  overlapBookingIds: string[];
 }

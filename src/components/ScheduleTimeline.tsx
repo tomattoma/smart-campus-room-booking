@@ -1,7 +1,6 @@
 import { CalendarDays } from 'lucide-react';
 import type { Room, Booking } from '@/types';
 import { minToTime } from '@/utils/timeFormat';
-import { slotsOverlap } from '@/utils/bookingRules';
 
 interface ScheduleTimelineProps {
   room: Room;
@@ -9,13 +8,14 @@ interface ScheduleTimelineProps {
   pendingStart: number | null;
   pendingEnd: number | null;
   pendingAvailable: boolean | null;
+  overlapBookingIds: string[];
 }
 
 const DAY_START = 420; // 7:00 AM
 const DAY_END = 1260; // 9:00 PM
 const RANGE = DAY_END - DAY_START;
 
-export function ScheduleTimeline({ room, bookings, pendingStart, pendingEnd, pendingAvailable }: ScheduleTimelineProps) {
+export function ScheduleTimeline({ room, bookings, pendingStart, pendingEnd, pendingAvailable, overlapBookingIds }: ScheduleTimelineProps) {
   const roomBookings = bookings.filter((b) => b.roomId === room.id).sort((a, b) => a.startMin - b.startMin);
   const hours: number[] = [];
   for (let h = DAY_START; h <= DAY_END; h += 60) hours.push(h);
@@ -63,8 +63,7 @@ export function ScheduleTimeline({ room, bookings, pendingStart, pendingEnd, pen
           {roomBookings.map((b) => {
             const left = ((Math.max(b.startMin, DAY_START) - DAY_START) / RANGE) * 100;
             const width = ((Math.min(b.endMin, DAY_END) - Math.max(b.startMin, DAY_START)) / RANGE) * 100;
-            const isPendingOverlap =
-              pendingStart !== null && pendingEnd !== null && slotsOverlap(pendingStart, pendingEnd, b.startMin, b.endMin);
+            const isPendingOverlap = overlapBookingIds.includes(b.id);
 
             return (
               <div

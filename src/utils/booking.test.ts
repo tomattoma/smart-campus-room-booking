@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateBooking } from '@/utils/booking';
-import { StandardCampusPolicy, StrictExamPeriodPolicy, slotsOverlap } from '@/utils/bookingRules';
+import { standardCampusPolicy as standard, strictExamPeriodPolicy as strict, slotsOverlap } from '@/utils/bookingRules';
 import { rooms as fixtureRooms, initialBookings as fixtureBookings } from '@/data/mockData';
 import type { Room, Booking } from '@/types';
 
@@ -136,6 +136,12 @@ describe('AC6 — overlaps rejected, touching boundaries allowed', () => {
     expect(res.messages.some((m) => m.severity === 'info' && /touch/i.test(m.text))).toBe(true);
   });
 
+  it('reports the ids of overlapping bookings only', () => {
+    const existing = withBooking({ id: 'b1', roomId: 'rm-test', startMin: ONE_PM, endMin: ONE_PM + 60, title: 'Class', bookedBy: 'Prof' });
+    expect(standard.validate(baseRoom, ONE_PM + 30, ONE_PM + 90, existing, NOON - 10).overlapBookingIds).toEqual(['b1']);
+    expect(standard.validate(baseRoom, ONE_PM + 60, ONE_PM + 120, existing, NOON - 10).overlapBookingIds).toEqual([]);
+  });
+
   it('ignores bookings for a different room', () => {
     const otherRoomBooking = withBooking({ id: 'b2', roomId: 'rm-other', startMin: ONE_PM, endMin: ONE_PM + 60, title: 'Other', bookedBy: 'X' });
     const res = validateBooking(baseRoom, ONE_PM, ONE_PM + 60, otherRoomBooking, NOON - 10);
@@ -147,10 +153,7 @@ describe('AC6 — overlaps rejected, touching boundaries allowed', () => {
 // Strategy Pattern — direct policy tests
 // ---------------------------------------------------------------------------
 
-const standard = new StandardCampusPolicy();
-const strict = new StrictExamPeriodPolicy();
-
-describe('StandardCampusPolicy — AC1–AC6 via the BookingPolicy interface', () => {
+describe('standardCampusPolicy — AC1–AC6 via the BookingPolicy interface', () => {
   it('AC1: rejects a blocked room', () => {
     const res = standard.validate(blockedRoom, ONE_PM, ONE_PM + 60, [], NOON - 10);
     expect(res.available).toBe(false);
@@ -191,7 +194,7 @@ describe('StandardCampusPolicy — AC1–AC6 via the BookingPolicy interface', (
   });
 });
 
-describe('StrictExamPeriodPolicy — stricter 60-minute ceiling, shared rules', () => {
+describe('strictExamPeriodPolicy — stricter 60-minute ceiling, shared rules', () => {
   it('exposes its policy identity', () => {
     expect(strict.id).toBe('strict-exam-period');
     expect(strict.maxDurationMinutes).toBe(60);
@@ -281,7 +284,7 @@ describe('Regression — named scenarios against AC1–AC6', () => {
   });
 
   it('121-minute duration: one minute over the 120 cap is rejected (AC5)', () => {
-    // AC5 — StandardCampusPolicy caps slot length at 120 minutes. 121 must fail.
+    // AC5 — standardCampusPolicy caps slot length at 120 minutes. 121 must fail.
     const res = validateBooking(room, NOW + 10, NOW + 131, [], NOW);
     expect(res.available).toBe(false);
     expect(res.messages.some((m) => m.severity === 'error' && /120 minutes/i.test(m.text))).toBe(true);

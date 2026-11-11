@@ -29,10 +29,12 @@ function pushInfo(messages: ValidationMessage[], text: string): void {
   messages.push({ severity: 'info', text });
 }
 
-abstract class CampusPolicyBase implements BookingPolicy {
-  abstract readonly id: string;
-  abstract readonly label: string;
-  abstract readonly maxDurationMinutes: number;
+export class CampusPolicy implements BookingPolicy {
+  constructor(
+    readonly id: string,
+    readonly label: string,
+    readonly maxDurationMinutes: number
+  ) {}
 
   validate(
     room: Room,
@@ -43,6 +45,10 @@ abstract class CampusPolicyBase implements BookingPolicy {
   ): ValidationResult {
     const messages: ValidationMessage[] = [];
     let available = true;
+    const roomBookings = bookings.filter((b) => b.roomId === room.id);
+    const overlapping = startMin < endMin
+      ? roomBookings.filter((b) => slotsOverlap(startMin, endMin, b.startMin, b.endMin))
+      : [];
 
     if (room.blocked) {
       pushError(
@@ -82,11 +88,9 @@ abstract class CampusPolicyBase implements BookingPolicy {
     }
 
     if (available && !room.blocked) {
-      const roomBookings = bookings.filter((b) => b.roomId === room.id);
-      const overlaps = roomBookings.filter((b) => slotsOverlap(startMin, endMin, b.startMin, b.endMin));
-      if (overlaps.length > 0) {
+      if (overlapping.length > 0) {
         available = false;
-        overlaps.forEach((b) => {
+        overlapping.forEach((b) => {
           pushError(messages, `Overlaps with "${b.title}" (${minToTime(b.startMin)} – ${minToTime(b.endMin)}).`);
         });
         pushInfo(messages, 'Touching boundaries (e.g. ending at 11:00 and starting at 11:00) are allowed.');
@@ -102,20 +106,10 @@ abstract class CampusPolicyBase implements BookingPolicy {
       }
     }
 
-    return { available, messages };
+    return { available, messages, overlapBookingIds: overlapping.map((b) => b.id) };
   }
 }
 
-export class StandardCampusPolicy extends CampusPolicyBase {
-  readonly id = 'standard-campus';
-  readonly label = 'Standard Campus';
-  readonly maxDurationMinutes = 120;
-}
-
-export class StrictExamPeriodPolicy extends CampusPolicyBase {
-  readonly id = 'strict-exam-period';
-  readonly label = 'Strict Exam Period';
-  readonly maxDurationMinutes = 60;
-}
-
-export const defaultPolicy: BookingPolicy = new StandardCampusPolicy();
+export const standardCampusPolicy = new CampusPolicy('standard-campus', 'Standard Campus', 120);
+export const strictExamPeriodPolicy = new CampusPolicy('strict-exam-period', 'Strict Exam Period', 60);
+export const defaultPolicy: BookingPolicy = standardCampusPolicy;
