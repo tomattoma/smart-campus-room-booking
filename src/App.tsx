@@ -8,6 +8,7 @@ import type { Room } from '@/types';
 import { RoomSelector } from '@/components/RoomSelector';
 import { BookingForm } from '@/components/BookingForm';
 import { ScheduleTimeline } from '@/components/ScheduleTimeline';
+import { AvailabilityExplainer } from '@/components/AvailabilityExplainer';
 import { ValidationMessages, StatusBadge } from '@/components/ValidationMessages';
 
 function App() {
@@ -113,6 +114,16 @@ function App() {
                     )}
                   </div>
                 </div>
+
+                {/* AI Explainer — separate from the deterministic availability check */}
+                {validation && (
+                <AvailabilityExplainer
+                  room={selectedRoom}
+                  startMin={startMin}
+                  endMin={endMin}
+                  validation={validation}
+                />
+                )}
               </div>
 
               {/* Right: Timeline */}
